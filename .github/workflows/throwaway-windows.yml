@@ -43,3 +43,7 @@ jobs:
           git diff --stat
           if cargo test --locked -p vectorcraft-engine --lib device_named_libraries_without_a_title; then echo "!!! passed without the title check"; exit 1; fi
           git checkout crates/engine/src/cmd/swatchlib.rs
+          sed -i '/None if untitled/d' crates/engine/src/cmd/swatchlib.rs
+          git diff --stat
+          if cargo test --locked -p vectorcraft-engine --lib device_named_libraries_without_a_title; then echo "!!! passed without the unknown owner check"; exit 1; fi
+          git checkout crates/engine/src/cmd/swatchlib.rs
