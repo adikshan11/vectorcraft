@@ -850,6 +850,13 @@ fn a_device_named_library_keeps_off_a_file_another_program_replaced() {
         assert_eq!(std::fs::read(&path).unwrap(), replaced);
         // Saved again, it stays on the file it moved to.
         assert_eq!(save(json!({"user": true, "name": "COM¹", "format": format})), again);
+        // A file that can't be read is left alone too, whoever saved it.
+        std::fs::write(&path, b"ASEF\0").unwrap();
+        std::fs::write(&again, b"ASEF\0").unwrap();
+        let moved = save(json!({"user": true, "name": "COM¹", "format": format}));
+        assert!(moved != path && moved != again, "{moved}");
+        assert_eq!(std::fs::read(&path).unwrap(), b"ASEF\0");
+        assert_eq!(std::fs::read(&again).unwrap(), b"ASEF\0");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

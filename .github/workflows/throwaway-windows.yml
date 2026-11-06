@@ -52,3 +52,7 @@ jobs:
           git diff --stat
           if cargo test --locked -p vectorcraft-engine --lib keeps_off_a_file_another_program_replaced; then echo "!!! passed without forgetting"; exit 1; fi
           git checkout crates/engine/src/cmd/swatchlib.rs
+          sed -i 's/if held || unread {/if held {/' crates/engine/src/cmd/swatchlib.rs
+          git diff --stat
+          if cargo test --locked -p vectorcraft-engine --lib keeps_off_a_file_another_program_replaced; then echo "!!! passed without keeping off unread files"; exit 1; fi
+          git checkout crates/engine/src/cmd/swatchlib.rs

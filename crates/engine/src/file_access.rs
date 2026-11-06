@@ -491,6 +491,7 @@ mod tests {
     }
 
     #[cfg(windows)]
+    /// On Windows a root matches in any case, and device names are refused.
     #[test]
     fn windows_ignores_case_and_refuses_devices() {
         let (base, roots) = folders("case");
@@ -528,6 +529,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(base);
     }
 
+    /// What is a device name, with superscript digits and a name before a colon, and what isn't.
     #[test]
     fn device_names() {
         for d in ["CON", "nul", "Com1", "LPT9.txt", "aux.svg", "NUL ", "COM¹", "Lpt²", "lpt³.txt"] {

@@ -240,7 +240,11 @@ impl<L: LibraryFile> Libraries<L> {
             let held = self.extra.iter().any(|e| {
                 e.info.id.to_lowercase() == id && owner(e).is_none_or(|other| other != name && (device(name) || device(&other) || fallback(&other)))
             });
-            if held {
+            // A file that can't be read isn't listed, and it is still someone's: a device name stays off it.
+            let unread = (device(name) || device_file_name(name))
+                && !self.extra.iter().any(|e| e.info.id.to_lowercase() == id)
+                && library_files(&dir, L::EXTS).iter().any(|p| format!("user/{}", file_name(p)).to_lowercase() == id);
+            if held || unread {
                 // Saved again, it goes back to the file it was given the first time.
                 let own = self
                     .extra
