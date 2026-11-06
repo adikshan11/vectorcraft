@@ -34,7 +34,12 @@ jobs:
         shell: bash
         run: |
           cargo test --locked -p vectorcraft-engine --lib a_library_named_like_a_device -- --nocapture
+          cargo test --locked -p vectorcraft-engine --lib a_device_named_library_without_a_title -- --nocapture
           sed -i 's/e\.lib\.name() != name/e.lib.name() != e.lib.name()/' crates/engine/src/cmd/swatchlib.rs
           git diff --stat
           if cargo test --locked -p vectorcraft-engine --lib a_library_named_like_a_device; then echo "!!! passed without the fix"; exit 1; fi
+          git checkout crates/engine/src/cmd/swatchlib.rs
+          sed -i 's/if titled$/if true/; s/let titled = /let _titled = /' crates/engine/src/cmd/swatchlib.rs
+          git diff --stat
+          if cargo test --locked -p vectorcraft-engine --lib a_device_named_library_without_a_title; then echo "!!! passed without the title check"; exit 1; fi
           git checkout crates/engine/src/cmd/swatchlib.rs
