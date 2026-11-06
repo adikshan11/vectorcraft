@@ -1,6 +1,6 @@
 # Gaps
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-05 · **Change:** minor (`.ai` paths with a Calligraphic brush open brushed, with the 6D Art Pen's channels, and Windows reads the pen's tilt and barrel rotation, #372; scores and estimates unchanged; Compound Shapes add-on, beyond Illustrator; scores and estimates unchanged; Contour add-on, beyond Illustrator; scores and estimates unchanged; a slow first frame is waited for instead of restarting without the graphics adapter, and the menu bar no longer waits for the installed fonts' scan; scores and estimates unchanged) · **Target:** Adobe Illustrator 2026 (30.x)
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-05 · **Change:** minor (an image zoomed in on is separated, colorized or proofed only where it shows (#4155); scores and estimates unchanged; a document's first frame renders on the render worker, so opening a heavy file no longer freezes the window; scores and estimates unchanged; large images in CMYK documents are shrunk before they are separated into ink planes (#4155); scores and estimates unchanged; `.ai` paths with a Calligraphic brush open brushed, with the 6D Art Pen's channels, and Windows reads the pen's tilt and barrel rotation, #372; scores and estimates unchanged; Compound Shapes add-on, beyond Illustrator; scores and estimates unchanged; Contour add-on, beyond Illustrator; scores and estimates unchanged; a slow first frame is waited for instead of restarting without the graphics adapter, and the menu bar no longer waits for the installed fonts' scan; scores and estimates unchanged) · **Target:** Adobe Illustrator 2026 (30.x)
 
 ## Feature submission evidence
 
@@ -36,6 +36,7 @@ Artboard Options forwards the active Artboard tool's Scale Artwork with Artboard
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-05 | minor | G15: large-selection transforms reuse object locations found during command validation; a 20,000-object nudge took 58.07 ms before and 51.26 ms after in paired median runs. Estimate unchanged. |
 | 2026-11-05 | minor | G9, G14: `.ai` paths with a Calligraphic brush open brushed (the brush on the stroke, at its weight) where the object's settings are the brush's own, and the brush's Tilt, Bearing and Rotation codes come in as those channels; Windows reads the pen's tilt and barrel rotation from Windows Ink (#372). Checked against a user's file of 6D Art Pen strokes, used locally; not tried with a pen. Scores and estimates unchanged. |
 | 2026-11-04 | minor | Contour add-on (beyond Illustrator): drag away from a selected shape's edge to grow a live copy of it, or toward the inside to shrink it; the copy carries a live Offset Path effect, so it stays editable until Bake (Expand Appearance), a second drag changes the same Contour instead of nesting one, and a floating bar sets the distance and the Sharp, Round or Square corners. `addon.contour.set` is the command behind it. It is a built-in add-on: Object › Plug-ins › Contour, and its own heading in All Tools, with no default shortcut or toolbar slot. A VectorCraft design built on Offset Path; no other application was inspected. Scores and estimates unchanged. |
 | 2026-11-04 | minor | Contour tool (beyond Illustrator): drag away from a selected shape's edge to grow a live copy of it, or toward the inside to shrink it; the copy carries a live Offset Path effect, so it stays editable until Bake (Expand Appearance), a second drag changes the same Contour instead of nesting one, and a floating bar sets the distance and the Sharp, Round or Square corners. `object.contour` is the command behind it. A VectorCraft design built on Offset Path; no other application was inspected. Scores and estimates unchanged. |
@@ -495,7 +496,8 @@ from G14 and the budget run of G15: **~170–270 h** one agent, ~50–80 h wall 
   pointer, and a right-click offers Bring to Front, Bring Forward, Send Backward and Send to Back for it in that area
   (`object.intertwine.arrange` with `order` front, forward, backward or back;
   <https://helpx.adobe.com/illustrator/desktop/manage-objects/reshape-transform-objects/create-intertwined-objects.html>).
-  The group renders, saves and exports through its live expansion. Still missing: adding objects to the group by
+  The group renders, saves and exports through its live expansion; an object brought over another shows no hairline
+  of the one below along that object's edges (#5337). Still missing: adding objects to the group by
   dragging them in the Layers panel is untested.
 - **Done (from users' reports):** Object › Create Gradient Mesh on an embedded image turns it into a mesh over its
   rectangle, with the image's transform kept; each point takes the average colour and opacity of the picture around it
@@ -649,6 +651,26 @@ from G14 and the budget run of G15: **~170–270 h** one agent, ~50–80 h wall 
 
 ## G15 Performance budgets and a GPU renderer
 
+- **Improved (2026-11-05):** hovering over a nearby plain stroke or path outline checks the
+  candidate segments directly. On a 200,000-anchor open path, a hit near its middle took about
+  11–13 ms before and 1.0–1.4 ms after in paired runs on a busy Windows machine. A miss between
+  two long strokes, inside their box, took 18.7 ms before and 1.6 ms after; a distant miss stayed
+  about 0.7 ms. Other stroke styles and fill hits retain the full-path check; the idle
+  performance-budget run is still open.
+- **Improved (2026-11-05):** moving a large selection reuses the object locations found while
+  validating the transform command. A 20,000-object nudge took 58.07 ms before and 51.26 ms after
+  in paired median runs on a busy Windows machine; copies and active typing still look up their
+  current objects. Selection, object positions and undo behavior remain the same.
+- **Improved (#4155):** an image zoomed in on has its colours separated, colorized or proofed only for the
+  1,024-pixel tiles in view: zooming in to 100% on the file of #4155 went from 8.6 s to 0.05 s (measured in the app,
+  M3 Pro, one run). A CMYK image painting its own inks is still made whole.
+- **Improved (#4155):** a document's first frame renders on the render worker, not the UI thread: opening the file
+  of #4155 kept the UI thread busy for 8.7 s at a stretch, now at most 64 ms, and a 50,000-path SVG 1.4 s, now
+  62 ms (measured in the app, M3 Pro, one run each). A light document's frame, ready within 16 ms, still shows at once.
+- **Improved (#4155):** the canvas shrinks a reduced image to the mip it draws before separating it into ink planes,
+  colorizing it or proofing it, so that work is done at the size the image shows, not at its own. On the
+  141-megapixel image of #4155 the first frame went from 9.2 s to 1.6 s and the sharp frame after a pan from 3.9 s
+  to 8 ms (measured in the app, M3 Pro, one run each).
 - **Improved (2026-11-02):** the renderer keeps a compound path's assembled path with the node, as it keeps a plain
   path's, instead of assembling its members again in every frame; the path is assembled into a buffer sized up front.
   Unused geometry entries are dropped after a few frames however few there are (before, only past 1,024 entries), so
@@ -759,6 +781,10 @@ trap, and the defaults (0.25 pt, 100%, 40%) are VectorCraft's own, the pages giv
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-05 | minor | G15: nearby hits on plain long strokes and outlines check their candidate segments directly; a 200,000-anchor middle hit took about 11–13 ms before and 1.0–1.4 ms after in paired runs. An inside-bounds miss fell from 18.7 ms to 1.6 ms. Estimate unchanged; idle budget run still open. |
+| 2026-11-05 | minor | G15: an image zoomed in on is separated, colorized or proofed only for the tiles in view (#4155); 100% zoom on that file 8.6 s → 0.05 s. Estimate unchanged. |
+| 2026-11-05 | minor | G15: a document's first frame renders on the render worker (#4155); the longest UI-thread stall opening that file went from 8.7 s to 64 ms. Estimate unchanged. |
+| 2026-11-05 | minor | G15: a reduced image is shrunk before it is separated into ink planes (#4155); first frame 9.2 s → 1.6 s, sharp frame after a pan 3.9 s → 8 ms on that file. Estimate unchanged. |
 | 2026-11-05 | minor | G7: document tabs are dragged along the tab strip to reorder them (`document.move`, #5663). Estimate unchanged. |
 | 2026-11-02 | minor | G15: the renderer keeps a compound path's assembled path between frames and drops unused geometry entries after a few frames however few there are. Estimate unchanged. |
 | 2026-11-02 | minor | G15: hit testing culls paths and compound paths by their control points' box and tests a compound path's outline and fill against only its members near the click; the same objects are hit. Estimate unchanged. |

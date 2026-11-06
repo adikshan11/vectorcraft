@@ -1359,6 +1359,7 @@ mask first". Pattern editing mode does not count as isolation mode here.
 `view.transparencyGrid {on?}` (View → Show Transparency Grid; default: toggle) is view state of each open document,
 like the mask view: the grid shows behind the artboards of the documents that turn it on, on the canvas and in
 `ui.screenshot`, never in exports. It returns `{on}`, isn't undoable and doesn't mark the document changed.
+The command rejects an `on` value that is not a boolean. Omitting `on` toggles the current value.
 
 `view.globalRulers {global?}` (View → Rulers → Change to Global / Artboard Rulers, Cmd+Alt+R; default: toggle) is
 saved with the document and undoable. With artboard rulers (a new document's) the rulers count from the active
@@ -1630,6 +1631,7 @@ step. With guides selected, `edit.clear` (Delete) deletes them and `object.nudge
 View › Guides › Lock Guides (`view.guides.lock`) deselects them and the paths made into guides, in every open
 document, and refuses these commands until unlocked. While it is on, a command that selects art, such as `edit.undo`,
 `edit.redo`, `object.exitIsolation`, `object.unlockAll`, `object.showAll` or `edit.paste`, leaves the guides out.
+`view.guides.lock` rejects a `locked` value that is not a boolean. Omitting `locked` toggles the current value.
 
 `view.guides.release {index?, ids?}` (View › Guides › Release Guides) turns guides into paths → `{count}`. With
 `index` it releases that ruler guide, and with `ids` it releases those guide paths (and the guide paths inside them).
@@ -1790,8 +1792,10 @@ already walks Image Trace. Short agent entry points:
   `dataset.import`, adds no undo step when it leaves the variables and data sets as they were. The library
   is XML whose `variableSets` element holds `variableSet` elements, each with a `variables` element of `variable`
   elements (`varName`, `trait`) and a `sampleDataSets` element of `sampleDataSet` elements (`dataSetName`). Every
-  variable of the document is deleted with its bindings and values, and every data set is deleted. Then the library's
-  variables whose `trait` is `textcontent` are defined as text variables, unbound. In each data set, the element named
+  data set is deleted, and every variable of the document is deleted with its bindings and values, except a text
+  variable the library also declares: it keeps its bindings, so selecting one of the library's data sets changes the
+  objects bound to it. Then the library's other variables whose `trait` is `textcontent` are defined as text
+  variables, unbound. In each data set, the element named
   after a text variable gives its value: the text of its `p` elements, one paragraph each. An element without a `p`
   element gives no value. Variables of other kinds are left out with their values: the reply lists them in `skipped`
   (`name`, `trait`), and its `warning` names each `trait` with its count. The reply's `deleted` and `deletedDataSets`
@@ -4173,7 +4177,7 @@ and `links.relink {folder}`, the search of the document's folder and `links.find
 active document's missing links, or of the images and placed documents `ids` whatever their status, and returns at once
 with an `id` and the search's `state` (`searching` while it runs). It finds the files with each linked file's name, in
 any letter case, and lists them best first as `{path, size, match, caseDiffers?}`: `same` when the file has the size and
-hash saved with the link, `size` when it has the saved size and the link saved no hash (or the file is larger than 1 GB,
+hash saved with the link, `size` when it has the saved size and the link saved no hash (or the file is larger than 1 GiB,
 which a search doesn't hash), else `name`. Within each kind, a file whose name has the link's letter case comes first.
 Then each file's folder names are compared with the saved path's, from the innermost outward up to the first one that
 differs, and a file with more matching names comes first; files that still tie are listed by path. Before the
@@ -4464,6 +4468,7 @@ deselects the slices in every open document; unlocking or showing them again lea
 restore the selection that was cleared. While the slices are locked or hidden, a command that selects slices, such as
 `select.object.slices` (which replies `count: 0`), `object.slice.select`, `object.slice.create`, `edit.undo` or
 `edit.redo`, leaves them out; a selected object that is an object slice stays selected.
+`object.slice.clipToArtboard`, `view.slices.hide`, and `view.slices.lock` reject a flag that is not a boolean. Omitting the flag toggles its current value.
 
 ```json
 {"name":"run_command","arguments":{"command":"object.slice.make","params":{}}}
