@@ -410,6 +410,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(base);
     }
 
+    /// A root and a path reached through links are compared after the links are followed.
     #[test]
     fn links_are_followed_before_comparing() {
         let (base, roots) = folders("links");
@@ -507,6 +508,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(base);
     }
 
+    /// Scopes nest, and a scope goes with work handed to other threads.
     #[test]
     fn scopes_nest_and_carry_to_other_threads() {
         let (base, roots) = folders("scopes");

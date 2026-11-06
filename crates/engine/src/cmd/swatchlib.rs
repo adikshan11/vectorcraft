@@ -24,6 +24,7 @@ use super::patternlib;
 use super::swatch::{map_default_paints, map_swatch_links, str_list, swatch_json};
 use super::{Color, CommandSpec, Result, Session, always, bad, cmd, has_doc, switch_or, text_param};
 
+/// The swatch library commands.
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
