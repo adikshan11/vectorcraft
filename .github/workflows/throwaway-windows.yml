@@ -34,6 +34,7 @@ jobs:
         shell: bash
         run: |
           cargo test --locked -p vectorcraft-engine --lib a_library_named_like_a_device -- --nocapture
+          cargo test --locked -p vectorcraft-engine --lib keeps_off_a_file_another_program_replaced -- --nocapture
           cargo test --locked -p vectorcraft-engine --lib device_named_libraries_without_a_title -- --nocapture
           sed -i 's/other != name/other != other/' crates/engine/src/cmd/swatchlib.rs
           git diff --stat
@@ -46,4 +47,8 @@ jobs:
           sed -i '/None if untitled/d' crates/engine/src/cmd/swatchlib.rs
           git diff --stat
           if cargo test --locked -p vectorcraft-engine --lib device_named_libraries_without_a_title; then echo "!!! passed without the unknown owner check"; exit 1; fi
+          git checkout crates/engine/src/cmd/swatchlib.rs
+          sed -i '/self.saved_as.remove(&key)/d' crates/engine/src/cmd/swatchlib.rs
+          git diff --stat
+          if cargo test --locked -p vectorcraft-engine --lib keeps_off_a_file_another_program_replaced; then echo "!!! passed without forgetting"; exit 1; fi
           git checkout crates/engine/src/cmd/swatchlib.rs

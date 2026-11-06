@@ -104,9 +104,10 @@ pub struct Libraries<L = SwatchLibrary> {
     /// Loaded libraries copied into the user library folder ([`Libraries::copy_to_user`]): the
     /// loaded id and the User Defined id [`Libraries::get`] finds for it.
     copied: Vec<(String, String)>,
-    /// The name each User Defined file was saved under ([`Libraries::write`]), lower case id first:
-    /// a format that keeps no title (`.ase`) reads its name from the file name instead.
-    saved_as: HashMap<String, String>,
+    /// The name each User Defined file was saved under ([`Libraries::write`]), lower case id first,
+    /// with the hash of what was written: a format that keeps no title (`.ase`) reads its name from
+    /// the file name instead. [`Libraries::rescan`] forgets a file something else has changed.
+    saved_as: HashMap<String, (String, u64)>,
 }
 
 #[derive(Clone, Debug)]
@@ -168,9 +169,15 @@ impl<L: LibraryFile> Libraries<L> {
         let Some(dir) = self.user_dir.clone() else { return };
         for path in library_files(&dir, L::EXTS) {
             let file = file_name(&path);
-            let read = || crate::file_access::unconfined(|| read_file(&path)).ok().and_then(|b| L::read(&b, stem(&file)).ok());
-            let Some(lib) = crate::guard::catch_panic(read).ok().flatten() else { continue };
+            let read = || {
+                crate::file_access::unconfined(|| read_file(&path)).ok().and_then(|b| L::read(&b, stem(&file)).ok().map(|lib| (lib, file_hash(&b))))
+            };
+            let Some((lib, hash)) = crate::guard::catch_panic(read).ok().flatten() else { continue };
             let info = LibraryInfo { id: format!("user/{file}"), name: library_tab_name(&file, lib.name()), category: "user" };
+            let key = info.id.to_lowercase();
+            if self.saved_as.get(&key).is_some_and(|(_, saved)| *saved != hash) {
+                self.saved_as.remove(&key);
+            }
             self.extra.push(Extra { info, path: Some(path), lib: Arc::new(lib) });
         }
     }
@@ -226,7 +233,7 @@ impl<L: LibraryFile> Libraries<L> {
             // have made has no known owner until it is saved here.
             let untitled = L::read(bytes, "\0").is_ok_and(|lib| lib.name() == "\0");
             let owner = |e: &Extra<L>| match self.saved_as.get(&e.info.id.to_lowercase()) {
-                Some(saved) => Some(saved.clone()),
+                Some((saved, _)) => Some(saved.clone()),
                 None if untitled && device_file_name(e.lib.name()) => None,
                 None => Some(e.lib.name().to_string()),
             };
@@ -250,7 +257,7 @@ impl<L: LibraryFile> Libraries<L> {
             let path = std::path::Path::new(&dir).join(&file).to_string_lossy().to_string();
             // The app's own folder, under a name made safe: no root applies.
             crate::file_access::unconfined(|| create_dir(&dir).and_then(|()| write_file(&path, bytes)))?;
-            self.saved_as.insert(format!("user/{file}").to_lowercase(), name.to_string());
+            self.saved_as.insert(format!("user/{file}").to_lowercase(), (name.to_string(), file_hash(bytes)));
             self.rescan();
             out["path"] = json!(path);
             out["library"] = json!(format!("user/{file}"));
@@ -386,6 +393,14 @@ pub fn library_file_name(name: &str, ext: &str) -> String {
     } else {
         format!("{base}.{ext}")
     }
+}
+
+/// The hash [`Libraries::rescan`] compares to notice a saved file has changed.
+fn file_hash(bytes: &[u8]) -> u64 {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    hasher.finish()
 }
 
 /// Is `stem` a file name [`library_file_name`] gives a device name (`COM¹-`, `COM¹-.x`), or one of

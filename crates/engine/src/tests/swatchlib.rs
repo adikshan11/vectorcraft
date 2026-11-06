@@ -832,6 +832,28 @@ fn device_named_libraries_without_a_title_keep_their_own_files() {
     }
 }
 
+/// A file another program replaces is no longer the library saved there: a library named like a
+/// device leaves it alone, with or without a title.
+#[test]
+fn a_device_named_library_keeps_off_a_file_another_program_replaced() {
+    for format in ["ase", "gpl"] {
+        let dir = temp_dir("device-replaced");
+        let mut s = session();
+        s.swatch_libraries.set_user_dir(Some(dir.to_string_lossy().to_string()));
+        let mut save = |p: Value| run(&mut s, "swatch.library.save", p)["path"].as_str().unwrap().to_string();
+        let path = save(json!({"user": true, "name": "COM¹", "format": format}));
+        let other = save(json!({"user": true, "name": "Other", "format": format, "names": ["Grays"]}));
+        let replaced = std::fs::read(&other).unwrap();
+        std::fs::write(&path, &replaced).unwrap();
+        let again = save(json!({"user": true, "name": "COM¹", "format": format}));
+        assert_ne!(again, path);
+        assert_eq!(std::fs::read(&path).unwrap(), replaced);
+        // Saved again, it stays on the file it moved to.
+        assert_eq!(save(json!({"user": true, "name": "COM¹", "format": format})), again);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
 /// #3602: a library titled with a Windows device name is saved under a name that is not one.
 #[test]
 fn a_library_file_name_is_never_a_windows_device_name() {
