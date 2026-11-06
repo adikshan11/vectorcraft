@@ -30,3 +30,11 @@ jobs:
         run: python .github/throwaway/mutate.py "${APP}-engine"
         env:
           APP: ${{ github.event.repository.name }}
+      - name: Two libraries, one file name, with the fix and without it
+        shell: bash
+        run: |
+          cargo test --locked -p vectorcraft-engine --lib a_library_named_like_a_device -- --nocapture
+          sed -i 's/e\.lib\.name() != name/e.lib.name() != e.lib.name()/' crates/engine/src/cmd/swatchlib.rs
+          git diff --stat
+          if cargo test --locked -p vectorcraft-engine --lib a_library_named_like_a_device; then echo "!!! passed without the fix"; exit 1; fi
+          git checkout crates/engine/src/cmd/swatchlib.rs
