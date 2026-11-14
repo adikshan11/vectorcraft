@@ -130,6 +130,7 @@ pub use access::{check_linked_scripts, write_file_with, write_save_file, write_s
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests_readonly;
+pub(crate) use access::may_probe;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use access::{Placed, copy_new, file_metadata};
 pub(crate) use access::{

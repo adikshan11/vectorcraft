@@ -565,10 +565,13 @@ fn collect_and_write(package: Package, write: &mut dyn FnMut(&str, &[u8]) -> Res
 /// An error when writing any of `entries` (paths relative to `root`) would replace one of the
 /// `sources` (compared by their real paths, so aliases and `..` don't hide a collision).
 fn check_no_overwrite(root: &Path, entries: &[Entry], sources: &[&str]) -> Result<()> {
-    let real: Vec<PathBuf> = sources.iter().filter_map(|s| std::fs::canonicalize(s).ok()).collect();
+    // Only where automation may read or write: a path it may not touch isn't looked up, so none on
+    // a network share is, before the write that follows is refused.
+    let real: Vec<PathBuf> = sources.iter().filter(|s| super::fileio::may_probe(s)).filter_map(|s| std::fs::canonicalize(s).ok()).collect();
     for (rel, _) in entries {
         let path = root.join(rel);
-        if let Ok(dest) = std::fs::canonicalize(&path)
+        if super::fileio::may_probe(&path.to_string_lossy())
+            && let Ok(dest) = std::fs::canonicalize(&path)
             && real.contains(&dest)
         {
             return Err(bad(C, format!("`{}` would be overwritten by the package: choose a different folder or name", path.display())));

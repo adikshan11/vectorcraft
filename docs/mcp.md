@@ -267,9 +267,13 @@ the suite) keep the agent to the folders you give it:
   existing folder's links are followed and the rest must be plain names, so `..` below a folder that
   doesn't exist is refused, as is a link that leads nowhere (writing through it would create its target).
   The result is compared with the root by whole folder names: `/work2/x` is not inside `/work`. On
-  Windows case is ignored, UNC paths (`\\server\share\…`) are resolved like drive-letter ones, and
+  Windows case is ignored, and
   device names (`CON`, `NUL`, `COM1`…) and a `:` in a name after the drive (an NTFS alternate data stream
   such as `x.svg:evil`, which hides data in a stream no folder listing shows) are refused.
+  A network path (`\\server\share\…`, `\\?\UNC\…`, WebDAV's `\\host@SSL\share\…`), a device path (`\\.\…`) or a
+  verbatim path that isn't a disk is refused by its name before anything looks it up, since looking it up would
+  contact that host, unless a root is on the same server and share (or the same device or prefix). A link whose
+  target is one of those is refused from the link's text, before it is followed.
 - With `--connect`, the server makes the paths of `open_file`, `save_file`, `export` (`path` or
   `options.path`) and `screenshot {path}` absolute against its own working directory before it sends
   them to the app. Paths inside `run_command` and `command_batch` params go to the app as given, and the

@@ -145,6 +145,14 @@ pub(crate) fn may_write(path: &str) -> Result<()> {
     crate::file_access::check_write(path).map_err(EngineError::Other)
 }
 
+/// May the file system be asked whether something is at `path` (does it exist, what is it)? Only
+/// when automation may read or write there, which also keeps a network path from being looked up
+/// before the write that follows is refused. A path it may not touch reads as not there; the read
+/// or write that follows says why.
+pub(crate) fn may_probe(path: &str) -> bool {
+    crate::file_access::check_read(path).is_ok() || crate::file_access::check_write(path).is_ok()
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn read_file(path: &str) -> Result<Vec<u8>> {
     may_read(path)?;

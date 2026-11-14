@@ -79,6 +79,7 @@ fn free_name(folder: &str, base: &str, ext: &str, taken: impl Fn(&str) -> bool) 
         .find(|path| !taken(path))
 }
 
+/// `addon.document.saveTimestampedCopy`: save a copy of the document under the first unused date-and-time name in `folder`.
 fn save_timestamped_copy(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "addon.document.saveTimestampedCopy";
     let st = s.doc()?;
@@ -103,8 +104,9 @@ fn save_timestamped_copy(s: &mut Session, p: &Value) -> Result<Value> {
     let t = clock_date(s, "time", given).ok_or_else(|| bad(C, "there is no clock here: give `time` (Unix seconds)"))?;
     let [y, mo, d, h, mi, _] = vectorcraft_doc::metadata::civil(t);
     let base = format!("{stem}_{y:04}-{mo:02}-{d:02}_{h:02}-{mi:02}");
-    // Only whether something is there: the write itself goes through the automation roots.
-    let path = free_name(&folder, &base, format.extensions[0], |p| std::path::Path::new(p).exists())
+    // Only whether something is there, asked only where automation may read or write: the write
+    // itself goes through the automation roots.
+    let path = free_name(&folder, &base, format.extensions[0], |p| fileio::may_probe(p) && std::path::Path::new(p).exists())
         .ok_or_else(|| bad(C, "every numbered name for the copy is taken"))?;
     fileio::save_document(s, SaveMode::Copy, &json!({ "path": path, "format": format.id }))
 }
@@ -123,6 +125,7 @@ fn copy_options(format: &str) -> Value {
     }
 }
 
+/// `addon.document.exportAllOpen`: write a copy of every open document to `folder`, each under the first unused name.
 fn export_all_open(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "addon.document.exportAllOpen";
     let format = fileio::save_format(Some(str_param(p, "format").unwrap_or("pdf")), None).map_err(|e| bad(C, e))?;
@@ -140,7 +143,9 @@ fn export_all_open(s: &mut Session, p: &Value) -> Result<Value> {
         let title = st.doc.title.clone();
         let stem = fileio::file_stem(st.path.as_deref().unwrap_or(&title));
         // Names the copies already took count as taken, as do files on disk.
-        let Some(path) = free_name(&folder, &stem, ext, |p| written.iter().any(|w| w == p) || std::path::Path::new(p).exists()) else {
+        let Some(path) =
+            free_name(&folder, &stem, ext, |p| written.iter().any(|w| w == p) || (fileio::may_probe(p) && std::path::Path::new(p).exists()))
+        else {
             failed.push(json!({ "title": title, "error": "every numbered name for the copy is taken" }));
             continue;
         };

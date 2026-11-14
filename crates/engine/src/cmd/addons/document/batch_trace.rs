@@ -65,6 +65,7 @@ fn images(folder: &str, deep: bool, depth: usize, out: &mut Vec<String>) -> Resu
     Ok(())
 }
 
+/// `addon.document.batchTraceFolder`: trace each image of `folder` and save the results, each under the first unused name, in `dest`.
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) fn batch_trace_folder(s: &mut Session, p: &Value) -> Result<Value> {
     let folder = str_param(p, "folder").map(fileio::absolute_path).ok_or_else(|| bad(ID, "missing `folder`"))?;
@@ -119,8 +120,9 @@ pub(super) fn batch_trace_folder(s: &mut Session, p: &Value) -> Result<Value> {
             s.execute(trace, &json!({ "preset": preset }))?;
             let stem = fileio::file_stem(path);
             // Names this batch already took count as taken, as do files on disk.
-            let free = super::free_name(&dest, &stem, ext, |o| taken.iter().any(|t| t == o) || std::path::Path::new(o).exists())
-                .ok_or_else(|| bad(ID, "every numbered name for the result is taken"))?;
+            let free =
+                super::free_name(&dest, &stem, ext, |o| taken.iter().any(|t| t == o) || (fileio::may_probe(o) && std::path::Path::new(o).exists()))
+                    .ok_or_else(|| bad(ID, "every numbered name for the result is taken"))?;
             s.execute("document.save", &json!({ "path": free, "format": format }))?;
             Ok(free)
         };

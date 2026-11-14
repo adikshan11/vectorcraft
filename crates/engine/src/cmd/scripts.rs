@@ -324,18 +324,22 @@ impl Folder {
 }
 
 impl Loader for Folder {
+    /// The bytes of include `path` in the script's folder, up to `max`: refused when automation may not read it or a link leads out of the folder.
     fn load(&mut self, path: &str, max: usize) -> Loaded {
         let file = self.dir.join(path);
+        // Checked first: a path on a network share, or a link to one, is refused before the file
+        // system is asked about it.
+        let text = file.to_string_lossy();
+        if crate::file_access::check_read(&text).is_err() {
+            return Loaded::Refused;
+        }
         // A link that leads out of the script's folder isn't followed.
         if let (Some(real), Ok(target)) = (&self.real, std::fs::canonicalize(&file))
             && !target.starts_with(real)
         {
             return Loaded::Refused;
         }
-        let file = file.to_string_lossy();
-        if crate::file_access::check_read(&file).is_err() {
-            return Loaded::Refused;
-        }
+        let file = text;
         super::fileio::read_file_head(&file, max).map_or(Loaded::Missing, Loaded::Bytes)
     }
 }
